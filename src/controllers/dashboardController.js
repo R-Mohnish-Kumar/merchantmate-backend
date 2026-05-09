@@ -3,6 +3,7 @@ const { roundToTwo } = require("../utils/calculations");
 const {
   getMerchantTransactionsCollection,
 } = require("../utils/merchantCollections");
+const { db } = require("../config/firebase");
 
 const getStartOfToday = () => {
   const date = new Date();
@@ -87,6 +88,65 @@ const getDashboardSummary = async (req, res) => {
   }
 };
 
+const getWeeklySales = async (req, res) => {
+  try {
+    const merchantId = req.user.uid;
+
+    const transactionsRef = db
+      .collection("merchants")
+      .doc(merchantId)
+      .collection("transactions");
+
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay() + 1);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const snapshot = await transactionsRef
+      .where("createdAt", ">=", startOfWeek)
+      .get();
+
+    const weeklyMap = {
+      Mon: 0,
+      Tue: 0,
+      Wed: 0,
+      Thu: 0,
+      Fri: 0,
+      Sat: 0,
+      Sun: 0
+    };
+
+    snapshot.forEach((doc) => {
+      const transaction = doc.data();
+
+      if (!transaction.createdAt || !transaction.total) return;
+
+      const date = transaction.createdAt.toDate();
+      const day = date.toLocaleDateString("en-GB", { weekday: "short" });
+
+      if (weeklyMap[day] !== undefined) {
+        weeklyMap[day] += Number(transaction.total);
+      }
+    });
+
+    const data = Object.keys(weeklyMap).map((day) => ({
+      day,
+      revenue: Number(weeklyMap[day].toFixed(2))
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to load weekly sales"
+    });
+  }
+};
 module.exports = {
   getDashboardSummary,
+  getWeeklySales
 };
