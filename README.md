@@ -123,6 +123,7 @@ This structure ensures each merchant only accesses their own products, transacti
 - Calculates today’s revenue
 - Calculates total transaction count
 - Calculates average order value
+- Calculates weekly sales values
 - Identifies best-selling product
 - Returns recent transactions
 
